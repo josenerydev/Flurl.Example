@@ -14,10 +14,12 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<HttpClientAuthorizationDelegatingHandler>();
 builder.Services.AddHttpClient<IMapService, MapService>(client =>
-{
-    client.BaseAddress = new Uri("https://7790c6bf-b841-4861-b4eb-771358c0c53e.mock.pstmn.io");
-}).AddHttpMessageHandler<HttpClientAuthorizationDelegatingHandler>()
-    .AddPolicyHandler(GetRetryPolicy()); ;
+    {
+        client.BaseAddress = new Uri("https://7790c6bf-b841-4861-b4eb-771358c0c53e.mock.pstmn.io");
+    })
+    .AddHttpMessageHandler<HttpClientAuthorizationDelegatingHandler>()
+    .AddPolicyHandler(GetRetryPolicy())
+    .AddPolicyHandler(GetCircuitBreakerPolicy());
 
 var app = builder.Build();
 
@@ -41,6 +43,20 @@ static IAsyncPolicy<HttpResponseMessage> GetRetryPolicy()
     return HttpPolicyExtensions
         .HandleTransientHttpError()
         .OrResult(msg => msg.StatusCode == System.Net.HttpStatusCode.NotFound)
-        .WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2,
-                                                                    retryAttempt)));
+        .WaitAndRetryAsync(3, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)), (exception, retryCount, context) =>
+        {
+            // Add logic to be executed before each retry, such as logging
+        });
+    //.RetryAsync(3, onRetry: (exception, retryCount, context) =>
+    //{
+    //    // Add logic to be executed before each retry, such as logging
+    //});
+    //.WaitAndRetryAsync(6, retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)));
+}
+
+static IAsyncPolicy<HttpResponseMessage> GetCircuitBreakerPolicy()
+{
+    return HttpPolicyExtensions
+        .HandleTransientHttpError()
+        .CircuitBreakerAsync(5, TimeSpan.FromSeconds(30));
 }
