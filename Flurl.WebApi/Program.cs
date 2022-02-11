@@ -13,8 +13,10 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 builder.Services.AddTransient<HttpClientAuthorizationDelegatingHandler>();
-builder.Services.AddHttpClient<IMapService, MapService>()
-    .AddHttpMessageHandler<HttpClientAuthorizationDelegatingHandler>()
+builder.Services.AddHttpClient<IMapService, MapService>(client =>
+{
+    client.BaseAddress = new Uri("https://7790c6bf-b841-4861-b4eb-771358c0c53e.mock.pstmn.io");
+}).AddHttpMessageHandler<HttpClientAuthorizationDelegatingHandler>()
     .AddPolicyHandler(GetRetryPolicy()); ;
 
 var app = builder.Build();
